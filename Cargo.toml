@@ -1,0 +1,11 @@
+[package]
+name = "bysyncify"
+version = "0.1.0"
+edition = "2021"
+license = "CC0-1.0"
+description = "Bindings and a high-level interface to Binaryen's Asyncify"
+
+[dependencies]
+atomic-waker = "1.1.2"
+pin-project-lite = "0.2.16"
+waker-fn = "1.2.0"
