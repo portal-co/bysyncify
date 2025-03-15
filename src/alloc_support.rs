@@ -93,6 +93,13 @@ impl<U: FnOnce(CoreHandle<'_>) -> T, T> Coroutine<U, T> {
         }
     }
 }
+impl<U,T> Future for Coroutine<U,T>{
+    type Output = T;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.project().raw.poll(cx)
+    }
+}
 pub struct CoreHandle<'a> {
     core: Arc<Core>,
     phantom: PhantomData<&'a ()>,
