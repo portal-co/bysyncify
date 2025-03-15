@@ -8,75 +8,40 @@ use core::{
     mem::MaybeUninit,
     pin::Pin,
     sync::atomic::AtomicBool,
-    task::{Context, Poll},
+    task::{Context, Poll, Waker},
 };
 
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use atomic_waker::AtomicWaker;
-use waker_fn::waker_fn;
-
-extern crate alloc;
+// use waker_fn::waker_fn;
 
 #[repr(C)]
-pub struct Stack {
+pub struct RawStack {
     pub start: *mut u8,
     pub end: *mut u8,
-    private: (),
-}
-impl Drop for Stack {
-    fn drop(&mut self) {
-        unsafe {
-            Vec::from_raw_parts(
-                self.start,
-                self.end.byte_offset_from(self.start).try_into().unwrap(),
-                self.end.byte_offset_from(self.start).try_into().unwrap(),
-            );
-        }
-    }
-}
-impl Stack {
-    pub fn new(mut a: Vec<u8>) -> Self {
-        while a.len() != a.capacity() {
-            a.push(0);
-        }
-        let mut a = a.leak();
-        return Self {
-            start: a.as_mut_ptr(),
-            end: a.as_mut_ptr_range().end,
-            private: (),
-        };
-    }
 }
 
 #[link(wasm_import_module = "asyncify")]
 unsafe extern "C" {
-    pub unsafe fn start_unwind(stack: *mut Stack);
+    pub unsafe fn start_unwind(stack: *mut RawStack);
     pub unsafe fn stop_unwind();
-    pub unsafe fn start_rewind(stack: *mut Stack);
+    pub unsafe fn start_rewind(stack: *mut RawStack);
     pub unsafe fn stop_rewind();
     pub unsafe fn get_state() -> u32;
 }
 
-struct Core {
-    waker: Arc<AtomicWaker>,
-    stack: UnsafeCell<Stack>,
+pub struct RawCore {
+    waker: AtomicWaker,
+    pub stack: UnsafeCell<RawStack>,
     needs_rewind: AtomicBool,
 }
 
-impl Core {
-    fn new(stack_size: usize) -> Arc<Self> {
-        Arc::new(Self {
-            waker: Arc::new(Default::default()),
-            stack: UnsafeCell::new(Stack::new((0..stack_size).map(|_| 0).collect())),
-            needs_rewind: Default::default(),
-        })
-    }
+impl RawCore {
     #[inline(never)]
-    unsafe fn poll<T, U>(
+    pub unsafe fn poll<T, U>(
         &self,
         cx: &mut Context,
-        go: fn(U) -> MaybeUninit<T>,
-        state: U,
+        go: fn(&MaybeUninit<U>) -> MaybeUninit<T>,
+        state: MaybeUninit<U>,
     ) -> Poll<T> {
         self.waker.register(cx.waker());
         let mut r = false;
@@ -86,9 +51,9 @@ impl Core {
                 .swap(false, core::sync::atomic::Ordering::SeqCst)
             {
                 r = true;
-                start_rewind(self.stack.get());
+                start_rewind(core::mem::transmute(self.stack.get()));
             }
-            let v = go(state);
+            let v = go(&state);
             match get_state() {
                 0 => {
                     return Poll::Ready(v.assume_init());
@@ -109,19 +74,19 @@ impl Core {
         mut fut: Pin<&mut (dyn Future<Output = T> + '_)>,
     ) -> MaybeUninit<T> {
         unsafe {
-            let w = self.waker.clone();
+            let w = &self.waker;
             loop {
                 let w = w.clone();
                 match get_state() {
-                    0 => match fut
-                        .as_mut()
-                        .poll(&mut Context::from_waker(&waker_fn(move || w.wake())))
-                    {
+                    0 => match fut.as_mut().poll(&mut Context::from_waker(&match w.take() {
+                        Some(w) => w,
+                        None => Waker::noop().clone(),
+                    })) {
                         Poll::Ready(a) => {
                             return MaybeUninit::new(a);
                         }
                         Poll::Pending => {
-                            start_unwind(self.stack.get());
+                            start_unwind(core::mem::transmute(self.stack.get()));
                             return MaybeUninit::uninit();
                         }
                     },
@@ -133,65 +98,40 @@ impl Core {
             }
         }
     }
-    fn embed<T>(&self, mut fut: Pin<&mut (dyn Future<Output = T> + '_)>) -> T {
+    pub fn embed<T>(&self, mut fut: Pin<&mut (dyn Future<Output = T> + '_)>) -> T {
         unsafe { self.embed_internal(fut).assume_init() }
     }
 }
-#[derive(Clone)]
-pub struct CoreHandle<'a>(Arc<Core>, PhantomData<&'a ()>);
-impl<'a> CoreHandle<'a> {
-    pub fn embed<T>(&self, mut fut: Pin<&mut (dyn Future<Output = T> + '_)>) -> T {
-        return self.0.embed(fut);
-    }
-    pub fn to_raw(&self) -> RawCoreHandle {
-        RawCoreHandle(self.0.clone())
+pub struct RawCoroutine<U, T> {
+    raw: *const RawCore,
+    state: MaybeUninit<MaybeUninit<U>>,
+    r#fn: fn(&MaybeUninit<U>) -> MaybeUninit<T>,
+}
+pub unsafe fn raw_cor_base<F, T>(raw: *const RawCore, f: F, r#fn: fn(&MaybeUninit<F>) -> MaybeUninit<T>) -> RawCoroutine<F, T> {
+    RawCoroutine {
+        raw,
+        state: MaybeUninit::new(MaybeUninit::new(f)),
+        r#fn,
     }
 }
-#[derive(Clone)]
-pub struct RawCoreHandle(Arc<Core>);
-impl RawCoreHandle {
-    pub unsafe fn to_handle<'a>(&self) -> CoreHandle<'a> {
-        CoreHandle(self.0.clone(), PhantomData)
-    }
-    pub unsafe fn embed<T>(&self, mut fut: Pin<&mut (dyn Future<Output = T> + '_)>) -> T {
-        return self.0.embed(fut);
-    }
-    pub fn with_safe_handle<T>(&self, x: impl FnOnce(CoreHandle<'_>) -> T) -> T {
-        return x(CoreHandle(self.0.clone(), PhantomData));
-    }
-}
-// pin_project_lite::pin_project! {
-pub struct Coroutine<F> {
-    // #[pin]
-    core: Arc<Core>,
-    fun: *mut F,
-}
-// }
-impl<F: FnOnce(CoreHandle<'_>) -> T, T> Future for Coroutine<F> {
+impl<U, T> Future for RawCoroutine<U, T> {
     type Output = T;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        // let mut this = self.project();
-        // let h = CoreHandle(self.core.clone(), PhantomData);
         unsafe {
-            self.core.poll(
-                cx,
-                |(a, h)| {
-                    MaybeUninit::new(Box::from_raw(a as *mut F)(CoreHandle(
-                        (&*h).clone(),
-                        PhantomData,
-                    )))
-                },
-                (self.fun as *mut (), &raw const self.core),
-            )
+            self.raw
+                .as_ref()
+                .unwrap()
+                .poll(cx, self.r#fn, self.state.assume_init_read())
         }
     }
 }
-impl<F: FnOnce(CoreHandle<'_>) -> T, T> Coroutine<F> {
-    pub fn new(stack_size: usize, f: F) -> Self {
-        Self {
-            core: Core::new(stack_size),
-            fun: Box::into_raw(Box::new(f)),
-        }
-    }
-}
+unsafe impl<U: Send, T> Send for RawCoroutine<U, T> {}
+unsafe impl<U: Sync, T> Sync for RawCoroutine<U, T> {}
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+pub mod alloc_support;
+#[cfg(feature = "alloc")]
+pub use alloc_support::*;

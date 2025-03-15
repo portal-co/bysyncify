@@ -8,4 +8,7 @@ description = "Bindings and a high-level interface to Binaryen's Asyncify"
 [dependencies]
 atomic-waker = "1.1.2"
 pin-project-lite = "0.2.16"
-waker-fn = "1.2.0"
+
+
+[features]
+alloc=[]
