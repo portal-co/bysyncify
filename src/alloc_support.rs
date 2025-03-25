@@ -93,19 +93,42 @@ impl<U: FnOnce(CoreHandle<'_>) -> T, T> Coroutine<U, T> {
         }
     }
 }
-impl<U,T> Future for Coroutine<U,T>{
+impl<U, T> Future for Coroutine<U, T> {
     type Output = T;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         self.project().raw.poll(cx)
     }
 }
+#[derive(Clone)]
 pub struct CoreHandle<'a> {
     core: Arc<Core>,
     phantom: PhantomData<&'a ()>,
 }
 impl<'a> CoreHandle<'a> {
     pub fn embed<T>(&self, mut fut: Pin<&mut (dyn Future<Output = T> + '_)>) -> T {
+        self.core.raw.embed(fut)
+    }
+    pub fn raw(&self) -> RawCoreHandle {
+        RawCoreHandle {
+            core: self.core.clone(),
+        }
+    }
+}
+#[derive(Clone)]
+pub struct RawCoreHandle {
+    core: Arc<Core>,
+}
+impl RawCoreHandle {
+    ///SAFETY: the core referred to here MUST live at least as long as 'a
+    pub unsafe fn to_handle<'a>(&self) -> CoreHandle<'a> {
+        CoreHandle {
+            core: self.core.clone(),
+            phantom: PhantomData,
+        }
+    }
+    ///SAFETY: the core referred to here MUST live at least as long as 'a
+    pub unsafe fn embed<'a, T>(&'a self, mut fut: Pin<&mut (dyn Future<Output = T> + '_)>) -> T {
         self.core.raw.embed(fut)
     }
 }
