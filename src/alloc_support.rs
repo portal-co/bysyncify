@@ -115,6 +115,12 @@ impl<'a> CoreHandle<'a> {
         }
     }
 }
+impl awaiter_trait::Awaiter for CoreHandle<'_> {
+    fn r#await<T>(&self, f: Pin<&mut dyn Future<Output = T>>) -> T {
+        self.embed(f)
+    }
+}
+awaiter_trait::autoimpl!(<> CoreHandle<'_> as Awaiter);
 #[derive(Clone)]
 pub struct RawCoreHandle {
     core: Arc<Core>,
@@ -132,3 +138,9 @@ impl RawCoreHandle {
         self.core.raw.embed(fut)
     }
 }
+impl awaiter_trait::UnsafeAwaiter for RawCoreHandle {
+    unsafe fn unsafe_await<T>(&self, f: Pin<&mut dyn Future<Output = T>>) -> T {
+        unsafe { self.embed(f) }
+    }
+}
+awaiter_trait::autoimpl!(<> RawCoreHandle as UnsafeAwaiter);

@@ -102,6 +102,12 @@ impl RawCore {
         unsafe { self.embed_internal(fut).assume_init() }
     }
 }
+impl awaiter_trait::Awaiter for RawCore{
+    fn r#await<T>(&self, f: Pin<&mut dyn Future<Output = T>>) -> T {
+        self.embed(f)
+    }
+}
+awaiter_trait::autoimpl!(<> RawCore as Awaiter);
 pub struct RawCoroutine<U, T> {
     raw: *const RawCore,
     state: MaybeUninit<MaybeUninit<U>>,
