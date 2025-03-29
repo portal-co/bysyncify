@@ -10,9 +10,9 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "awaiter-trait"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7d02d59e7e015b630ed256167cfd743415f6f0c346053220937a619e67bb177"
+checksum = "32b1935caac0dd68bf49b2257737fe3c95043cdb39fdd557a3ba33a97e8e07ec"
 
 [[package]]
 name = "bysyncify"
