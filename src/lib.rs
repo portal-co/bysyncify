@@ -108,6 +108,12 @@ impl awaiter_trait::Awaiter for RawCore{
     }
 }
 awaiter_trait::autoimpl!(<> RawCore as Awaiter);
+impl awaiter_trait_02::Awaiter for RawCore{
+    fn r#await<T>(&self, f: Pin<&mut (dyn Future<Output = T> + '_)>) -> T {
+        self.embed(f)
+    }
+}
+awaiter_trait_02::autoimpl!(<> RawCore as Awaiter);
 pub struct RawCoroutine<U, T> {
     raw: *const RawCore,
     state: MaybeUninit<MaybeUninit<U>>,
