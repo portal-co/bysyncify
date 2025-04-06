@@ -22,7 +22,7 @@ checksum = "7b72e7ccf3b0c51b71cb4c4dde767ac3daa1d8441530f83911fcfeb2803582ca"
 
 [[package]]
 name = "bysyncify"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "atomic-waker",
  "awaiter-trait 0.1.1",
