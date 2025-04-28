@@ -3,6 +3,11 @@ use core::alloc::Layout;
 use crate::*;
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct CoroutimeMarker {
+    pub size: usize,
+}
+
 #[repr(transparent)]
 pub struct Stack {
     pub raw: RawStack,
@@ -127,6 +132,16 @@ impl awaiter_trait_02::Awaiter for CoreHandle<'_> {
     }
 }
 awaiter_trait_02::autoimpl!(<> CoreHandle<'_> as Awaiter);
+impl awaiter_trait_02::Coroutine for CoroutimeMarker {
+    fn exec<T>(
+        &self,
+        f: impl FnOnce(&(dyn awaiter_trait_02::r#dyn::DynAwaiter + '_)) -> T,
+    ) -> impl Future<Output = T> {
+        Coroutine::new(self.size, move |a| f(&a))
+    }
+}
+awaiter_trait_02::autoimpl!(<> CoroutimeMarker as Coroutine);
+
 #[derive(Clone)]
 pub struct RawCoreHandle {
     core: Arc<Core>,

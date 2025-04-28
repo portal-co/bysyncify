@@ -16,9 +16,9 @@ checksum = "32b1935caac0dd68bf49b2257737fe3c95043cdb39fdd557a3ba33a97e8e07ec"
 
 [[package]]
 name = "awaiter-trait"
-version = "0.2.0"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b72e7ccf3b0c51b71cb4c4dde767ac3daa1d8441530f83911fcfeb2803582ca"
+checksum = "174157b0b76c5c1a05ffe899b1b2a1058fd14a03fdba9151844fe8954d7466eb"
 
 [[package]]
 name = "bysyncify"
@@ -26,7 +26,7 @@ version = "0.2.5"
 dependencies = [
  "atomic-waker",
  "awaiter-trait 0.1.1",
- "awaiter-trait 0.2.0",
+ "awaiter-trait 0.2.7",
  "pin-project-lite",
 ]
 

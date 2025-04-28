@@ -8,7 +8,7 @@ description = "Bindings and a high-level interface to Binaryen's Asyncify"
 [dependencies]
 atomic-waker = "1.1.2"
 awaiter-trait = "^0.1.1"
-awaiter-trait-02 = {package="awaiter-trait",version="^0.2"}
+awaiter-trait-02 = {package="awaiter-trait",version="^0.2.7"}
 pin-project-lite = "0.2.16"
 
 
