@@ -1,6 +1,6 @@
 [package]
 name = "bysyncify"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 license = "CC0-1.0"
 description = "Bindings and a high-level interface to Binaryen's Asyncify"
