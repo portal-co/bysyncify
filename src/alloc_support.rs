@@ -17,15 +17,21 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 /// # Example
 ///
 /// ```ignore
-/// use bysyncify::CoroutimeMarker;
+/// use bysyncify::CoroutineMarker;
 ///
-/// let marker = CoroutimeMarker { size: 4096 };
+/// let marker = CoroutineMarker { size: 4096 };
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub struct CoroutimeMarker {
+pub struct CoroutineMarker {
     /// The size in bytes of the Asyncify stack buffer.
     pub size: usize,
 }
+
+/// Deprecated: Use [`CoroutineMarker`] instead.
+///
+/// This type alias exists for backward compatibility.
+#[deprecated(since = "0.2.7", note = "Use `CoroutineMarker` instead (fixes typo)")]
+pub type CoroutimeMarker = CoroutineMarker;
 
 /// A heap-allocated Asyncify stack.
 ///
@@ -240,7 +246,7 @@ impl awaiter_trait_02::Awaiter for CoreHandle<'_> {
     }
 }
 awaiter_trait_02::autoimpl!(<> CoreHandle<'_> as Awaiter);
-impl awaiter_trait_02::Coroutine for CoroutimeMarker {
+impl awaiter_trait_02::Coroutine for CoroutineMarker {
     fn exec<T>(
         &self,
         f: impl FnOnce(&(dyn awaiter_trait_02::r#dyn::DynAwaiter + '_)) -> T,
@@ -248,7 +254,7 @@ impl awaiter_trait_02::Coroutine for CoroutimeMarker {
         Coroutine::new(self.size, move |a| f(&a))
     }
 }
-awaiter_trait_02::autoimpl!(<> CoroutimeMarker as Coroutine);
+awaiter_trait_02::autoimpl!(<> CoroutineMarker as Coroutine);
 
 /// A raw handle to a coroutine's core without lifetime constraints.
 ///
