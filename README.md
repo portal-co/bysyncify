@@ -110,3 +110,12 @@ This project is licensed under [CC0-1.0](https://creativecommons.org/publicdomai
 - [Binaryen](https://github.com/WebAssembly/binaryen) - WebAssembly toolchain with Asyncify
 - [Asyncify blog post](https://kripken.github.io/blog/wasm/2019/07/16/asyncify.html) - Technical overview of Asyncify
 - [awaiter-trait](https://crates.io/crates/awaiter-trait) - Trait for awaiter implementations
+
+## Goals
+- [ ] Add project goals
+
+## Progress
+- [ ] Initial setup
+
+---
+*AI assisted*
