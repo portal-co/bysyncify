@@ -112,10 +112,11 @@ This project is licensed under [CC0-1.0](https://creativecommons.org/publicdomai
 - [awaiter-trait](https://crates.io/crates/awaiter-trait) - Trait for awaiter implementations
 
 ## Goals
-- [ ] Add project goals
+- [ ] Provide safe Rust wrappers for Asyncify
+- [ ] Integrate with `awaiter-trait`
 
 ## Progress
-- [ ] Initial setup
+- [ ] Crate setup (v0.2.6) with `awaiter-trait` integration
 
 ---
 *AI assisted*
